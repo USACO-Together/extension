@@ -1,0 +1,311 @@
+/*
+MIT License
+
+Copyright (c) 2023 Oviyan Gandhi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+/* General */
+
+body {
+    width: 400px;
+    padding-left: 15px;
+    padding-right: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background-color: rgb(26, 26, 26);
+    color: white;
+    user-select: none;
+}
+
+.centered {
+    text-align: center;
+}
+
+hr {
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+/* Heading Icon */
+
+.icon {
+    width: 30px;
+    margin-right: 10px;
+    position: relative;
+    top: 7px;
+}
+
+/* For showing and hiding different sections of the popup */
+
+.fade {
+    transition: opacity 1s ease-in-out;
+}
+.hidden {
+    opacity: 0;
+}
+.none {
+    display: none;
+}
+
+/* Input */
+
+label {
+    font-size: medium;
+}
+
+.form-field {
+    margin-bottom: 15px;
+}
+
+input {
+    transition: background-color 0.2s ease-in-out;
+    margin-top: 5px;
+    width: 100%;
+    font-size: 20px;
+    padding: 5px;
+    background-color: rgb(45, 45, 45);
+    color: white;
+    font-family: Consolas, monospace;
+    border: none;
+    border-radius: 5px;
+}
+
+input:hover {
+    transition: background-color 0.2s ease-in-out;
+    background-color: rgb(55, 55, 55);
+}
+
+input:focus {
+    outline: none;
+}
+
+/* Button */
+
+button {
+    transition: background-color 0.2s ease-in-out;
+    text-align: center;
+    color: white;
+    background-color: rgb(37, 99, 235);
+    border: 0px solid transparent;
+    border-radius: 6px;
+}
+button:hover {
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+    background-color: rgb(30, 64, 175);
+}
+
+/* Specific Buttons */
+
+#follow-btn, .unfollow-btn, #logout-btn, .submit-btn {
+    padding: 8px 16px 8px 12px;
+    width: 80px;
+    height: 40px;
+    margin: 10px;
+    font-size: 18px;
+}
+
+#logout-btn, #settings-btn {
+    padding: 2px;
+    font-size: 18px;
+    width: 25px;
+    height: 25px;
+    margin: 0;
+}
+
+#delete-btn {
+    width: 170px;
+}
+
+#button-container {
+    float: right;
+}
+
+.submit-btn {
+    width: 100px;
+    height: 50px;
+}
+
+.unfollow-btn {
+    margin-right: 0;
+    font-size: 16px;
+    width: 90px;
+    height: 35px;
+}
+
+#logout-btn, #delete-btn, .unfollow-btn {
+    background-color: red;
+}
+
+.unfollow-btn:hover, #delete-btn:hover, #logout-btn:hover {
+    background-color: rgb(200, 0, 0);
+}
+
+/* Current User */
+
+#current-user-container {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+#current-user {
+    user-select: text;
+    font-weight: bold;
+}
+
+/* Follow List */
+
+#follow-list {
+    padding-left: 0px;
+    margin-bottom: 0px;
+    font-size: 18px;
+    list-style: none;
+}
+
+li {
+    position: relative;
+    transition: opacity 0.5s ease-in-out, top 0.5s ease-in-out;
+    top: -50px;
+    opacity: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 20px;
+    user-select: text;
+}
+
+.chevron-container {
+    display: inline-block;
+}
+
+.chevron {
+    position: relative;
+    top: 2px;
+    height: 20px;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.middle-chevron:hover {
+    transform: rotate(90deg);
+}
+
+.last-chevron:hover {
+    transform: rotate(-90deg);
+}
+
+.name {
+    margin-left: 10px;
+}
+
+.solve-count {
+    position: absolute;
+    z-index: -1;
+    background-color: rgba(20, 20, 20);
+    transition: opacity 0.3s;
+    opacity: 0;
+    white-space: pre-line;
+    padding: 15px;
+    font-size: 18px;
+    font-family: Consolas, monospace;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Error Container */
+
+#error-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    user-select: text;
+    border: 3px solid red;
+    border-radius: 6px;
+    font-size: 18px;
+    padding: 10px;
+    text-align: center;
+    background-color: rgba(255, 0, 0, 0.2);
+}
+
+/* Loading Ellipsis (token from loading.io) */
+.lds-ellipsis {
+    display: inline-block;
+    position: relative;
+    width: 80px;
+    height: 80px;
+}
+
+.lds-ellipsis div {
+    position: absolute;
+    top: 33px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: rgb(37, 99, 235);
+    animation-timing-function: cubic-bezier(0, 1, 1, 0);
+}
+
+.lds-ellipsis div:nth-child(1) {
+    left: 8px;
+    animation: lds-ellipsis1 0.6s infinite;
+}
+
+.lds-ellipsis div:nth-child(2) {
+    left: 8px;
+    animation: lds-ellipsis2 0.6s infinite;
+}
+
+.lds-ellipsis div:nth-child(3) {
+    left: 32px;
+    animation: lds-ellipsis2 0.6s infinite;
+}
+
+.lds-ellipsis div:nth-child(4) {
+    left: 56px;
+    animation: lds-ellipsis3 0.6s infinite;
+}
+
+@keyframes lds-ellipsis1 {
+    0% {
+        transform: scale(0);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes lds-ellipsis3 {
+    0% {
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(0);
+    }
+}
+
+@keyframes lds-ellipsis2 {
+    0% {
+        transform: translate(0, 0);
+    }
+    100% {
+        transform: translate(24px, 0);
+    }
+}
