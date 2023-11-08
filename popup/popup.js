@@ -23,12 +23,14 @@ SOFTWARE.
 */
 
 // Utility functions
+const mkEl = typ => document.createElement(typ)//.bind(document);
+const elById = id => document.getElementById(id);
 
 function url(path){
     return "https://usaco.oviyan.tech" + path;
 }
 
-let loadingContainer;
+var loadingContainer;
 async function performRequest(method, path, data, suppressErrors){
     loadingContainer.classList.remove("none");
     data.method = method;
@@ -89,7 +91,7 @@ function showSection(el){
     requestAnimationFrame(() => {
         errorContainer.classList.add("none");
         loadingContainer.classList.add("none");
-        el = document.getElementById(el);
+        el = elById(el);
         el.classList.remove("none");
         requestAnimationFrame(() => el.classList.remove("hidden"));
         currentSection = el;
@@ -111,7 +113,7 @@ function switchSection(to){
 
 // Error functions
 
-let errorContainer;
+var errorContainer;
 const GENERAL_ERR_MSG = "Something went wrong, please try again later.";
 
 function showError(err){
@@ -121,18 +123,18 @@ function showError(err){
 
 // Follow / Unfollow functions
 
-let followList;
+var followList;
 
 function addFollower(fname){
-    const li = document.createElement("li");
+    const li = mkEl("li");
 
-    const div = document.createElement("div");
+    const div = mkEl("div");
     div.classList.add("name-container");
-    const span = document.createElement("span");
+    const span = mkEl("span");
     span.classList.add("name");
     span.textContent = fname;
 
-    const solveCount = document.createElement("ul");
+    const solveCount = mkEl("ul");
     solveCount.classList.add("solve-count");
     solveCount.classList.add("none");
     let tot = 0, today = 0;
@@ -146,7 +148,7 @@ function addFollower(fname){
     }
     solveCount.innerHTML = `<div>Total Solved:\nSolved Today:</div><div style="margin-left: 10px;">${tot}\n${today}</div>`;
 
-    const chevronContainer = document.createElement("div");
+    const chevronContainer = mkEl("div");
     chevronContainer.classList.add("chevron-container");
     chevronContainer.addEventListener("mouseenter", () => {
         solveCount.style.zIndex = 10;
@@ -162,7 +164,7 @@ function addFollower(fname){
         }, 300);
     });
 
-    const chevron = document.createElement("img");
+    const chevron = mkEl("img");
     chevron.classList.add("chevron");
     chevron.classList.add("last-chevron");
     chevron.src = "../assets/chevron.svg";
@@ -173,7 +175,7 @@ function addFollower(fname){
     div.appendChild(span);
     li.appendChild(div);
 
-    const btn = document.createElement("button");
+    const btn = mkEl("button");
     btn.textContent = "Unfollow";
     btn.classList.add("unfollow-btn");
     btn.addEventListener("click", unfollow);
@@ -228,7 +230,7 @@ async function mainPageSequence(token, requestFailCallback){
         requestFailCallback();
         return;
     }
-    document.getElementById("current-user").textContent = username;
+    elById("current-user").textContent = username;
     followList.innerHTML = "";
     for (fname of followData.following)
         addFollower(fname);
@@ -239,8 +241,8 @@ async function mainPageSequence(token, requestFailCallback){
 
 async function submitForm(path){
     errorContainer.classList.add("none");
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value.trim();
+    const username = elById("username").value.trim();
+    const password = elById("password").value.trim();
     if (!username && !password)
         showError("Username and password cannot be empty");
     else if (!username)
@@ -260,16 +262,16 @@ async function submitForm(path){
     }
 }
 
-let newUsername, newPassword, newPasswordConfirm;
+var newUsername, newPassword, newPasswordConfirm;
 let deleteBtnClicked = false;
 
 document.addEventListener('DOMContentLoaded', () => {
-    followList = document.getElementById("follow-list");
-    errorContainer = document.getElementById("error-container");
-    loadingContainer = document.getElementById("loading-container");
-    newUsername = document.getElementById("new-username");
-    newPassword = document.getElementById("new-password");
-    newPasswordConfirm = document.getElementById("new-password-confirm");
+    const elements = [
+        "follow-list", "error-container", "loading-container",
+        "new-username", "new-password", "new-password-confirm"
+    ]
+    for (const el of elements)
+        window[el.replace(/-./g, x=>x[1].toUpperCase())] = elById(el);
     chrome.storage.sync.get(["token"]).then(result => {
         if (typeof result.token === "string")
             mainPageSequence(result.token, () => switchSection("login-page"));
@@ -277,10 +279,10 @@ document.addEventListener('DOMContentLoaded', () => {
             switchSection("login-page");
     });
 
-    document.getElementById("signup-btn").addEventListener("click", () => submitForm("/users"));
-    document.getElementById("login-btn").addEventListener("click", () => submitForm("/token"));
+    elById("signup-btn").addEventListener("click", () => submitForm("/users"));
+    elById("login-btn").addEventListener("click", () => submitForm("/token"));
 
-    document.getElementById("logout-btn").addEventListener("click", () => {
+    elById("logout-btn").addEventListener("click", () => {
         chrome.storage.sync.get(["token"]).then(result => {
             if (typeof result.token === "string"){
                 performRequest("DELETE", "/token", {token: result.token}, true);
@@ -291,12 +293,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.getElementById("follow-btn").addEventListener("click", async () => {
+    elById("follow-btn").addEventListener("click", async () => {
         errorContainer.classList.add("none");
-        const followInput = document.getElementById("req-name");
+        const followInput = elById("req-name");
         const to_follow = followInput.value.trim();
         if (!to_follow) return;
-        if (to_follow == document.getElementById("current-user").textContent){
+        if (to_follow == elById("current-user").textContent){
             followInput = "";
             return showError("You may not follow yourself.");
         }
@@ -329,9 +331,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById("settings-btn").addEventListener("click", () => switchSection("settings-page"));
-    document.getElementById("back-btn").addEventListener("click", () => switchSection("main-page"));
-    const deleteBtn = document.getElementById("delete-btn");;
+    elById("settings-btn").addEventListener("click", () => switchSection("settings-page"));
+    elById("back-btn").addEventListener("click", () => switchSection("main-page"));
+    const deleteBtn = elById("delete-btn");
     deleteBtn.addEventListener("click", () => {
         if (deleteBtnClicked){
             chrome.storage.sync.get(["token"]).then(async (result) => {
@@ -353,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 5000);
         }
     });
-    document.getElementById("save-btn").addEventListener("click", async () => {
+    elById("save-btn").addEventListener("click", async () => {
         const body = {};
         const newName = newUsername.value.trim();
         const newPass = newPassword.value.trim();
@@ -378,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await chrome.storage.sync.set({token: data.token});
             if (newName && newName !== username){
                 username = newName;
-                document.getElementById("current-user").textContent = newName;
+                elById("current-user").textContent = newName;
             }
             newPassword.value = "";
             newPasswordConfirm.value = "";
