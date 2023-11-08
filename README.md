@@ -1,4 +1,4 @@
-# USACO-Together : Extension
+# USACO Together : Extension
 The actual chrome extension for USACO-Together
 
 What it adds:
