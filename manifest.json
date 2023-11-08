@@ -16,18 +16,14 @@
     "content_scripts": [{
         "js": ["content/content-script.js"],
         "css": ["content/content-script.css"],
-        "matches": ["https://usaco.guide/*"],
-        "world": "MAIN"
+        "matches": ["https://usaco.guide/*"]
     }],
-    "background": {
-        "service_worker": "background/service-worker.js"
-    },
     "externally_connectable": {
         "matches": ["https://usaco.guide/*"]
     },
     "web_accessible_resources": [{
         "matches": ["https://usaco.guide/*"],
-        "resources": ["assets/*"]
+        "resources": ["assets/*", "content/injected.js"]
     }],
     "permissions": [
         "storage"

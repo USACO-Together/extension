@@ -23,8 +23,9 @@ SOFTWARE.
 */
 
 "use strict";
-const EXTENSION_ID = "jmlpdjciabnplpimhafibghkcpjckblh";
-let loc, followData, userData, currentlyUpdating = false, chevronURL;
+let loc, followData, userData, currentlyUpdating = false;
+const chevronURL = chrome.runtime.getURL("assets/chevron.svg");
+const BASE_URL = "https://usaco.oviyan.tech";
 const validURL = /https\:\/\/usaco\.guide\/(bronze|silver|gold|plat|adv)\/(.+)/;
 
 // this exists because I am too lazy to implement all the service-worker stuff
@@ -73,33 +74,24 @@ const icons = {
     }
 };
 
-// Get a list of people who are being followed with progress set to "Not Attempted"
-function getDefaultList(){
-    const defaultList = document.createElement("ul");
-    defaultList.classList.add("follow-list");
-    for (const follow of followData.following){
-        const li = document.createElement("li");
-        li.classList.add("follow-list-item");
-        li.appendChild(icons.get("Not Attempted"));
-        const div = document.createElement("div");
-        const span = document.createElement("span");
-        span.textContent = follow;
-        li.dataset.username = follow;
-        div.classList.add("follow-list-item-name-date");
-        div.appendChild(span);
-        li.appendChild(div);
-        defaultList.appendChild(li);
-    }
-    return defaultList;
-}
-
 // Show the follow list with the progress of problems/modules (attr)
 function showFollowList(attr, getOffset){
     return function(){
-        const list = getDefaultList();
-        const offset = getOffset(this);
-        list.style.top = `${offset.top}px`;
-        list.style.left = `${offset.left}px`;
+        const list = document.createElement("ul");
+        list.classList.add("follow-list");
+        for (const follow of followData.following){
+            const li = document.createElement("li");
+            li.classList.add("follow-list-item");
+            li.appendChild(icons.get("Not Attempted"));
+            const div = document.createElement("div");
+            const span = document.createElement("span");
+            span.textContent = follow;
+            li.dataset.username = follow;
+            div.classList.add("follow-list-item-name-date");
+            div.appendChild(span);
+            li.appendChild(div);
+            list.appendChild(li);
+        }
         if (this.dataset.id in followData[attr]){
             const data = followData[attr][this.dataset.id];
             for (const li of list.children){
@@ -129,7 +121,12 @@ function showFollowList(attr, getOffset){
             })
             .forEach(node => list.appendChild(node));
         this.appendChild(list);
-        requestAnimationFrame(() => list.style.opacity = 1);
+        const offset = getOffset(list);
+        requestAnimationFrame(() => {
+            list.style.top = `${offset.top}px`;
+            list.style.left = `${offset.left}px`;
+            requestAnimationFrame(() => list.style.opacity = 1);
+        });
     }
 }
 
@@ -151,11 +148,11 @@ function getFollowListBtn(onmouseenter){
     return btn;
 }
 
-function showFollowerProgressCallback(moduleID){
+function showFollowerProgress(moduleID){
     const problems = [...document.getElementsByTagName("tr")].filter(e => e.id.startsWith("problem-"));
     problems.forEach(el => {
         const btn = getFollowListBtn(showFollowList("problems", el => {
-            const rect = el.getBoundingClientRect();
+            const rect = el.parentElement.getBoundingClientRect();
             return {
                 left: rect.left + window.scrollX,
                 top: rect.top + window.scrollY + 30
@@ -164,10 +161,19 @@ function showFollowerProgressCallback(moduleID){
         btn.dataset.id = el.id.slice(8);
         el.firstChild.firstChild.prepend(btn);
     });
+    let first = true;
     document.querySelectorAll('[id^="headlessui-menu-button"].rounded-md.shadow-sm')
         .forEach(el => {
             // kinda wonky
-            const btn = getFollowListBtn(showFollowList("modules", () => {return {left: 0, top: 40};}));
+            const cfirst = first;
+            if (first) first = false;
+            const offset = {left: 0, top: 40};
+            const btn = getFollowListBtn(showFollowList(
+                "modules", list => {
+                    if (cfirst)
+                        offset.left = -list.offsetWidth + 20;
+                    return offset;
+                }));
             btn.dataset.id = moduleID;
             btn.style.marginTop = "0.5rem";
             btn.style.fontSize = "1rem";
@@ -176,49 +182,57 @@ function showFollowerProgressCallback(moduleID){
         });
 }
 
-function showFollowerProgress(moduleID){
-    if (!chevronURL)
-        chrome.runtime.sendMessage(EXTENSION_ID, {type: "CHEVRON_URL"}, response => {
-            chevronURL = response.url;
-            showFollowerProgressCallback(moduleID);
-        });
-    else showFollowerProgressCallback(moduleID);
+// Token value
+
+let token;
+chrome.storage.sync.get(["token"]).then(result => token = result.token);
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === "sync" && changes.token !== undefined)
+        token = changes.token.newValue;
+});
+
+async function performRequest(path, data){
+    data = data || {};
+    data.headers = {"Content-Type": "application/json", "Authorization": `Bearer ${token}`};
+    let response;
+    try {
+        response = await fetch(BASE_URL + path, data);
+    } catch {
+        return null;
+    }
+    const resp = await response.json();
+    if (!response.ok){
+        console.log(resp);
+        return null;
+    }
+    return resp;
+}
+
+async function ensureDataExists(){
+    if (followData !== undefined && userData !== undefined)
+        return true;
+    if (!token)
+        return false;
+    currentlyUpdating = true;
+    const resp = await performRequest("/user_data");
+    currentlyUpdating = false;
+    if (resp === null)
+        return false;
+    followData = resp.followData;
+    userData = resp.userData.progress;
+    return true;
 }
 
 // add the follow list buttons whenever the page changes
 setInterval(async () => {
     const res = validURL.exec(location.href);
-    if (currentlyUpdating || location.href === loc || res === null)
+    if (!token || currentlyUpdating || location.href === loc || res === null)
         return;
     loc = location.href;
-    if (!followData){
-        currentlyUpdating = true;
-        chrome.runtime.sendMessage(EXTENSION_ID, {type: "DATA_REQUEST"}, response => {
-            currentlyUpdating = false;
-            if (!response.success)
-                return;
-            followData = response.data.followData;
-            userData = response.data.userData.progress;
-            showFollowerProgress(res[2].split("?")[0]);
-        });
-    } else showFollowerProgress(res[2].split("?")[0]);
+    if (!(await ensureDataExists()))
+        return;
+    showFollowerProgress(res[2].split("?")[0]);
 }, 2000);
-
-function getLatestFormatted(data, type){
-    const keyName = `${type}ID`;
-    let latest = {};
-    for (const obj of data){
-        if (!(obj[keyName] in latest) || latest[obj[keyName]].timestamp < obj.timestamp){
-            latest[obj[keyName]] = obj;
-        }
-    }
-    for (const key in latest)
-        latest[key] = {
-            id: latest[key][keyName], progress: latest[key][`${type}Progress`],
-            lastUpdated: Math.floor(latest[key].timestamp/1000)
-        };
-    return latest;
-}
 
 function getChanges(prev, curr){
     const changes = [];
@@ -229,35 +243,30 @@ function getChanges(prev, curr){
     return changes;
 }
 
-function getAndUpdateChanges(curr){
+// gets the user data from the console and updates it on the webserver
+document.addEventListener("updateUserData", async (e) => {
+    if (currentlyUpdating) return;
+    currentlyUpdating = true;
+    const curr = e.detail;
+    if (!(await ensureDataExists()))
+        return;
     const problemsUpdated = getChanges(userData.problems, curr.problems);
-    if (problemsUpdated.length > 0)
-        chrome.runtime.sendMessage(EXTENSION_ID, {type: "PROBLEM_UPDATE", data: problemsUpdated});
+    if (problemsUpdated.length > 0){
+        await performRequest(`/problems`, {
+            method: "POST", body: JSON.stringify({problems: problemsUpdated})
+        });
+    }
     const modulesUpdated = getChanges(userData.modules, curr.modules);
-    if (modulesUpdated.length > 0)
-        chrome.runtime.sendMessage(EXTENSION_ID, {type: "MODULE_UPDATE", data: modulesUpdated});
+    if (modulesUpdated.length > 0){
+        await performRequest(`/modules`, {
+            method: "POST", body: JSON.stringify({modules: modulesUpdated})
+        });
+    }
     userData = curr;
     currentlyUpdating = false;
-}
+});
 
-// gets the user data from the console and updates it on the webserver
-const originalConsoleLog = console.log;
-window.console.log = (...args) => {
-    if (!currentlyUpdating && args.length > 1 && args[0] === "got new fb data"){
-        currentlyUpdating = true;
-        const curr = {
-            modules: getLatestFormatted(args[1].userProgressOnModulesActivity, "module"),
-            problems: getLatestFormatted(args[1].userProgressOnProblemsActivity, "problem")
-        };
-        if (userData === undefined){
-            chrome.runtime.sendMessage(EXTENSION_ID, {type: "DATA_REQUEST"}, response => {
-                if (response.success){
-                    followData = response.data.followData;
-                    userData = response.data.userData.progress;
-                    getAndUpdateChanges(curr);
-                }
-            });
-        } else getAndUpdateChanges(curr);
-    }
-    originalConsoleLog(...args);
-}
+var s = document.createElement('script');
+s.src = chrome.runtime.getURL('content/injected.js');
+s.onload = function() { this.remove(); };
+document.head.appendChild(s);
