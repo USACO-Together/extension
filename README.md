@@ -1,5 +1,5 @@
-# USACO-Together
-A chrome extension to track the progress of your friends on usaco.guide!
+# USACO-Together : Extension
+The actual chrome extension for USACO-Together
 
 What it adds:
 - An arrow beside each problem listed in the module you are viewing, and also besides your module progress.
@@ -10,5 +10,3 @@ How it works:
 - When a user logs in from the popup, a token for the [API](https://github.com/USACO-Together/server "API's GitHub repository") is stored using `chrome.storage.sync`.
 - A content script is used to inject JS into the usaco.guide page, which extracts user data from the console logs and sends it to the content script.
 - API calls are made from the content script to keep the data which is received from the injected script updated in the database, and also to get the follow data and inject the arrows besides the problems and the module progress.
-
-Please note that I am not a member of the CP Initiative (the creators of the usaco.guide website) and this is an unofficial extension.
