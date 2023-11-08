@@ -23,7 +23,7 @@ SOFTWARE.
 */
 
 // Utility functions
-const mkEl = typ => document.createElement(typ)//.bind(document);
+const mkEl = typ => document.createElement(typ);
 const elById = id => document.getElementById(id);
 
 function url(path){
