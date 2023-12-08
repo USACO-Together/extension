@@ -74,9 +74,25 @@ const icons = {
     }
 };
 
+// LOGGING
+const logs = {
+    logs: [],
+    add(id, message, level = "info") {
+        this.logs.push({level, id, message, time: new Date()});
+    },
+    toString() {
+        let content = "";
+        this.logs.forEach(log =>
+            content += `${log.time.toISOString()} ${log.level.toUpperCase()} | (${log.id}) ${log.message}\n`
+        );
+        return content;
+    }
+};
+
 // Show the follow list with the progress of problems/modules (attr)
 function showFollowList(attr, getOffset){
     return function(){
+        logs.add(this.dataset.id, `Creating follow list for ${attr}...`);
         const list = document.createElement("ul");
         list.classList.add("follow-list");
         for (const follow of followData.following){
@@ -125,19 +141,27 @@ function showFollowList(attr, getOffset){
         requestAnimationFrame(() => {
             list.style.top = `${offset.top}px`;
             list.style.left = `${offset.left}px`;
-            requestAnimationFrame(() => list.style.opacity = 1);
+            requestAnimationFrame(() => {
+                list.style.opacity = 1;
+                logs.add(this.dataset.id, "Displaying follow list");
+            });
         });
     }
 }
 
 function hideFollowList(){
+    logs.add(this.dataset.id, "Hiding follow list...");
     const list = this.lastChild;
     list.style.opacity = 0;
-    setTimeout(() => list.remove(), 300);
+    setTimeout(() => {
+        list.remove();
+        logs.add(this.dataset.id, "Follow list hidden");
+    }, 300);
 }
 
-function getFollowListBtn(onmouseenter){
+function getFollowListBtn(id, onmouseenter){
     const btn = document.createElement("div"); // >:)
+    btn.dataset.id = id;
     const img = document.createElement("img");
     img.src = chevronURL;
     img.classList.add("follow-list-btn-img");
@@ -145,22 +169,24 @@ function getFollowListBtn(onmouseenter){
     btn.classList.add("follow-list-btn");
     btn.addEventListener("mouseenter", onmouseenter.bind(btn));
     btn.addEventListener("mouseleave", hideFollowList.bind(btn));
+    logs.add(id, "Created button");
     return btn;
 }
 
 function showFollowerProgress(moduleID){
+    logs.add(moduleID, "Showing follower progress...");
     const problems = [...document.getElementsByTagName("tr")].filter(e => e.id.startsWith("problem-"));
     problems.forEach(el => {
-        const btn = getFollowListBtn(showFollowList("problems", el => {
+        const btn = getFollowListBtn(el.id.slice(8), showFollowList("problems", el => {
             const rect = el.parentElement.getBoundingClientRect();
             return {
                 left: rect.left + window.scrollX,
                 top: rect.top + window.scrollY + 30
             };
         }));
-        btn.dataset.id = el.id.slice(8);
         el.firstChild.firstChild.prepend(btn);
     });
+    logs.add(moduleID, "Added follow list buttons to problems");
     let first = true;
     document.querySelectorAll('[id^="headlessui-menu-button"].rounded-md.shadow-sm')
         .forEach(el => {
@@ -168,39 +194,63 @@ function showFollowerProgress(moduleID){
             const cfirst = first;
             if (first) first = false;
             const offset = {left: 0, top: 40};
-            const btn = getFollowListBtn(showFollowList(
+            const btn = getFollowListBtn(moduleID, showFollowList(
                 "modules", list => {
                     if (cfirst)
                         offset.left = -list.offsetWidth + 20;
                     return offset;
                 }));
-            btn.dataset.id = moduleID;
             btn.style.marginTop = "0.5rem";
             btn.style.fontSize = "1rem";
             el.parentElement.style.display = "inline-flex";
             el.parentElement.prepend(btn);
+            logs.add(moduleID, `Added ${cfirst ? "first" : "second"} follow list button`);
         });
 }
 
 // Token value
 
 let token;
-chrome.storage.sync.get(["token"]).then(result => token = result.token);
+chrome.storage.sync.get(["token"]).then(result => {
+    token = result.token;
+    logs.add(
+        "token",
+        `Got token from storage (${
+            (typeof token === "string") ? (token.slice(0, 4) + "...") : token
+        })`
+    );
+});
 chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === "sync" && changes.token !== undefined)
+    if (namespace === "sync" && changes.token !== undefined){
         token = changes.token.newValue;
+        logs.add(
+            "token",
+            `Token changed (${
+                (typeof token === "string") ? (token.slice(0, 4) + "...") : token
+            })`
+        );
+    }
 });
 
 async function performRequest(path, data){
     data = data || {};
-    data.headers = {"Content-Type": "application/json", "Authorization": `Bearer ${token}`};
+    data.headers = {"Content-Type": "application/json"};
+    let log_msg = `${data.method || "GET"} ${path}\nData: ${JSON.stringify(data)}`;
+    data.headers["Authorization"] = `Bearer ${token}`;
     let response;
     try {
         response = await fetch(BASE_URL + path, data);
-    } catch {
+    } catch (e) {
+        logs.add("request", `${log_msg}\nError: ${e}`, "error");
         return null;
     }
     const resp = await response.json();
+    let resp_str = "";
+    for (const key in resp){
+        console.log(key, typeof resp[key]);
+        resp_str += `${key}: ${(typeof resp[key] !== "object") ? resp[key] : "[object]"}, `;
+    }
+    logs.add("request", `${log_msg}\nResponse: {${resp_str.slice(0, -2)}}`);
     if (!response.ok){
         console.log(resp);
         return null;
@@ -209,10 +259,13 @@ async function performRequest(path, data){
 }
 
 async function ensureDataExists(){
+    logs.add("request", "Ensuring data exists...");
     if (followData !== undefined && userData !== undefined)
         return true;
-    if (!token)
+    if (!token){
+        logs.add("request", "Token not found, not updating data", "warn");
         return false;
+    }
     currentlyUpdating = true;
     const resp = await performRequest("/user_data");
     currentlyUpdating = false;
@@ -264,6 +317,18 @@ document.addEventListener("updateUserData", async (e) => {
     }
     userData = curr;
     currentlyUpdating = false;
+});
+
+chrome.runtime.onMessage.addListener(function(query, _, sendResponse) {
+    if (query.type === "ADD_LOG"){
+        logs.add("popup", query.message, query.level);
+        sendResponse(true);
+    }
+    else if (query.type === "EXPORT_LOGS"){
+        logs.add("logs", "Exporting logs...");
+        sendResponse(logs.toString());
+    }
+    else sendResponse(false);
 });
 
 var s = document.createElement('script');

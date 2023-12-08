@@ -123,12 +123,22 @@ button:hover {
     font-size: 18px;
 }
 
-#logout-btn, #settings-btn {
+#logout-btn, #settings-btn, #logs-btn {
     padding: 2px;
     font-size: 18px;
     width: 25px;
     height: 25px;
     margin: 0;
+}
+
+h2 {
+    display: inline-block;
+}
+
+#logs-btn {
+    position: relative;
+    left: 100px;
+    padding: 5px;
 }
 
 #delete-btn {

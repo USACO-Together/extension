@@ -22,9 +22,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+// Logging
+async function sendMessage(data){
+    const [tab] = await chrome.tabs.query({url: "https://usaco.guide/*"});
+    if (!tab) return null;
+    try {
+        return await chrome.tabs.sendMessage(tab.id, data);
+    } catch {
+        return null;
+    }
+}
+const log = (message, level = "info") => sendMessage({type: "ADD_LOG", message, level});
+
 // Utility functions
-const mkEl = typ => document.createElement(typ);
-const elById = id => document.getElementById(id);
+const mk = typ => document.createElement(typ);
+const $ = id => document.getElementById(id);
 
 function url(path){
     return "https://usaco.oviyan.tech" + path;
@@ -33,26 +45,32 @@ function url(path){
 var loadingContainer;
 async function performRequest(method, path, data, suppressErrors){
     loadingContainer.classList.remove("none");
+    const token = data.token;
+    delete data.token;
+    let log_msg = `${method} ${path}\nData: ${JSON.stringify(data)}`;
     data.method = method;
     data.headers = {"Content-Type": "application/json"};
-    if (data.token){
-        data.headers["Authorization"] = `Bearer ${data.token}`;
-        delete data.token;
-    }
+    if (token)
+        data.headers["Authorization"] = `Bearer ${token}`;
     if (data.body)
         data.body = JSON.stringify(data.body);
     let response;
     try {
         response = await fetch(url(path), data);
     } catch (err) {
+        log(`${log_msg}\nError: ${err}`, "error");
         loadingContainer.classList.add("none");
-        if (!suppressErrors){
-            console.log(`Error encountered when performing ${method} ${path} :\n`, err);
+        if (!suppressErrors)
             showError(GENERAL_ERR_MSG);
-        }
         return null;
     }
     data = await response.json();
+    let resp_str = "";
+    for (const key in data){
+        console.log(key, typeof data[key]);
+        resp_str += `${key}: ${(typeof data[key] !== "object") ? data[key] : "[object]"}, `;
+    }
+    log(`${log_msg}\nResponse: {${resp_str.slice(0, -2)}}`);
     loadingContainer.classList.add("none");
     if (!response.ok){
         if (!suppressErrors){
@@ -78,7 +96,6 @@ async function ensureDataExists(token){
         followData = data.followData;
         username = data.userData.username;
         newUsername.value = username;
-        return true;
     }
     return true;
 }
@@ -91,9 +108,10 @@ function showSection(el){
     requestAnimationFrame(() => {
         errorContainer.classList.add("none");
         loadingContainer.classList.add("none");
-        el = elById(el);
+        el = $(el);
         el.classList.remove("none");
         requestAnimationFrame(() => el.classList.remove("hidden"));
+        log(`Showing section ${el.id}`);
         currentSection = el;
     });
 }
@@ -102,6 +120,7 @@ function switchSection(to){
     errorContainer.classList.add("none");
     loadingContainer.classList.add("none");
     if (currentSection){
+        log(`Hiding section ${currentSection.id}`);
         currentSection.classList.add("hidden");
         setTimeout(() => {
             currentSection.classList.add("none");
@@ -126,15 +145,16 @@ function showError(err){
 var followList;
 
 function addFollower(fname){
-    const li = mkEl("li");
+    log(`Adding follower ${fname}`);
+    const li = mk("li");
 
-    const div = mkEl("div");
+    const div = mk("div");
     div.classList.add("name-container");
-    const span = mkEl("span");
+    const span = mk("span");
     span.classList.add("name");
     span.textContent = fname;
 
-    const solveCount = mkEl("ul");
+    const solveCount = mk("ul");
     solveCount.classList.add("solve-count");
     solveCount.classList.add("none");
     let tot = 0, today = 0;
@@ -148,14 +168,16 @@ function addFollower(fname){
     }
     solveCount.innerHTML = `<div>Total Solved:\nSolved Today:</div><div style="margin-left: 10px;">${tot}\n${today}</div>`;
 
-    const chevronContainer = mkEl("div");
+    const chevronContainer = mk("div");
     chevronContainer.classList.add("chevron-container");
     chevronContainer.addEventListener("mouseenter", () => {
+        log(`Showing solve count for ${fname}`);
         solveCount.style.zIndex = 10;
         solveCount.classList.remove("none");
         requestAnimationFrame(() => solveCount.style.opacity = 1);
     });
     chevronContainer.addEventListener("mouseleave", () => {
+        log(`Hiding solve count for ${fname}`);
         solveCount.style.opacity = 0;
         setTimeout(() => {
             solveCount.style.zIndex = -1;
@@ -164,7 +186,7 @@ function addFollower(fname){
         }, 300);
     });
 
-    const chevron = mkEl("img");
+    const chevron = mk("img");
     chevron.classList.add("chevron");
     chevron.classList.add("last-chevron");
     chevron.src = "../assets/chevron.svg";
@@ -175,7 +197,7 @@ function addFollower(fname){
     div.appendChild(span);
     li.appendChild(div);
 
-    const btn = mkEl("button");
+    const btn = mk("button");
     btn.textContent = "Unfollow";
     btn.classList.add("unfollow-btn");
     btn.addEventListener("click", unfollow);
@@ -195,6 +217,7 @@ function addFollower(fname){
     requestAnimationFrame(() => {
         li.style.opacity = 1;
         li.style.top = "0px";
+        log(`Added follower ${fname}`);
     });
 }
 
@@ -206,7 +229,11 @@ async function unfollow(){
     if ((await ensureDataExists(result.token)) === false)
         return;
     const to_unfollow = this.parentElement.getElementsByClassName("name")[0].textContent;
-    if (!followData.following.includes(to_unfollow)) return;
+    log(`Trying to unfollow ${to_unfollow}`);
+    if (!followData.following.includes(to_unfollow)){
+        log(`Already not following ${to_unfollow}`);
+        return;
+    }
     const data = await performRequest("DELETE", "/follows", {
         token: result.token, body: {username: to_unfollow}
     });
@@ -219,6 +246,7 @@ async function unfollow(){
             delete problem[to_unfollow];
         for (const module of Object.values(followData.modules))
             delete module[to_unfollow];
+        log(`Unfollowed ${to_unfollow}`);
     }
 }
 
@@ -230,7 +258,7 @@ async function mainPageSequence(token, requestFailCallback){
         requestFailCallback();
         return;
     }
-    elById("current-user").textContent = username;
+    $("current-user").textContent = username;
     followList.innerHTML = "";
     for (fname of followData.following)
         addFollower(fname);
@@ -241,8 +269,14 @@ async function mainPageSequence(token, requestFailCallback){
 
 async function submitForm(path){
     errorContainer.classList.add("none");
-    const username = elById("username").value.trim();
-    const password = elById("password").value.trim();
+    const username = $("username").value.trim();
+    const password = $("password").value.trim();
+    const log_msg = `submit form at ${path} with username ${username} and password ${
+        (typeof password === "string" ? (
+            "of " + ((password.length < 8 || password.length > 64) ? "in" : "") + "valid length"
+        ) : password)
+    }`
+    log(`Trying to ${log_msg}`);
     if (!username && !password)
         showError("Username and password cannot be empty");
     else if (!username)
@@ -257,6 +291,7 @@ async function submitForm(path){
         const data = await performRequest("POST", path, {body: {name: username, password: password}});
         if (data !== null) {
             await chrome.storage.sync.set({token: data.token});
+            log(`Successfully ${log_msg}`);
             await mainPageSequence(data.token, () => showError(GENERAL_ERR_MSG));
         }
     }
@@ -271,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         "new-username", "new-password", "new-password-confirm"
     ]
     for (const el of elements)
-        window[el.replace(/-./g, x=>x[1].toUpperCase())] = elById(el);
+        window[el.replace(/-./g, x=>x[1].toUpperCase())] = $(el);
     chrome.storage.sync.get(["token"]).then(result => {
         if (typeof result.token === "string")
             mainPageSequence(result.token, () => switchSection("login-page"));
@@ -279,11 +314,12 @@ document.addEventListener('DOMContentLoaded', () => {
             switchSection("login-page");
     });
 
-    elById("signup-btn").addEventListener("click", () => submitForm("/users"));
-    elById("login-btn").addEventListener("click", () => submitForm("/token"));
+    $("signup-btn").addEventListener("click", () => submitForm("/users"));
+    $("login-btn").addEventListener("click", () => submitForm("/token"));
 
-    elById("logout-btn").addEventListener("click", () => {
+    $("logout-btn").addEventListener("click", () => {
         chrome.storage.sync.get(["token"]).then(result => {
+            log("Logging out...");
             if (typeof result.token === "string"){
                 performRequest("DELETE", "/token", {token: result.token}, true);
                 chrome.storage.sync.remove(["token"]);
@@ -293,12 +329,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    elById("follow-btn").addEventListener("click", async () => {
+    $("follow-btn").addEventListener("click", async () => {
         errorContainer.classList.add("none");
-        const followInput = elById("req-name");
+        const followInput = $("req-name");
         const to_follow = followInput.value.trim();
+        log(`Trying to follow ${to_follow}`);
         if (!to_follow) return;
-        if (to_follow == elById("current-user").textContent){
+        if (to_follow == $("current-user").textContent){
             followInput = "";
             return showError("You may not follow yourself.");
         }
@@ -308,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             if (followData.following.includes(to_follow)){
                 followInput = "";
+                log(`Already following ${to_follow}`);
                 return showError("You are already following this user.");
             }
             const data = await performRequest("POST", "/follows", {
@@ -331,12 +369,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    elById("settings-btn").addEventListener("click", () => switchSection("settings-page"));
-    elById("back-btn").addEventListener("click", () => switchSection("main-page"));
-    const deleteBtn = elById("delete-btn");
+    $("settings-btn").addEventListener("click", () => switchSection("settings-page"));
+    $("back-btn").addEventListener("click", () => switchSection("main-page"));
+    const deleteBtn = $("delete-btn");
     deleteBtn.addEventListener("click", () => {
         if (deleteBtnClicked){
             chrome.storage.sync.get(["token"]).then(async (result) => {
+                log("Deleting account...");
                 if (typeof result.token === "string"){
                     const data = await performRequest("DELETE", "/users", {token: result.token});
                     if (data === null) return;
@@ -347,6 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         else {
+            log("Delete button clicked, waiting for conformation...");
             deleteBtnClicked = true;
             deleteBtn.textContent = "Confirm Deletion";
             setTimeout(() => {
@@ -355,24 +395,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 5000);
         }
     });
-    elById("save-btn").addEventListener("click", async () => {
+    $("save-btn").addEventListener("click", async () => {
         const body = {};
         const newName = newUsername.value.trim();
         const newPass = newPassword.value.trim();
         const confirmPass = newPasswordConfirm.value.trim();
+        log("Trying to save settings...");
         if (newName && newName !== username){
-            if (newName.length < 2 || newName.length > 32)
+            log(`Trying to change username from ${username} to ${newName}`);
+            if (newName.length < 2 || newName.length > 32){
+                log(`${newName} is invalid`);
                 return showError("Username must be between 2 and 32 characters");
+            }
             body.name = newName;
         }
         if (newPass){
-            if (newPass.length < 8 || newPass.length > 64)
+            log("Trying to change password...");
+            if (newPass.length < 8 || newPass.length > 64){
+                log("Password invalid");
                 return showError("Password must be between 8 and 64 characters");
-            if (newPass !== confirmPass)
+            }
+            if (newPass !== confirmPass){
+                log("Passwords do not match");
                 return showError("Passwords do not match");
+            }
             body.password = newPass;
         }
-        if (!body.name && !body.password) return;
+        if (!body.name && !body.password){
+            log("No changes made to settings");
+            return;
+        }
         const token = (await chrome.storage.sync.get(["token"])).token;
         if (typeof token === "string"){
             const data = await performRequest("PATCH", "/users", {token, body});
@@ -380,10 +432,23 @@ document.addEventListener('DOMContentLoaded', () => {
             await chrome.storage.sync.set({token: data.token});
             if (newName && newName !== username){
                 username = newName;
-                elById("current-user").textContent = newName;
+                $("current-user").textContent = newName;
             }
             newPassword.value = "";
             newPasswordConfirm.value = "";
+            log("Successfully saved settings");
         }
+    });
+    $("logs-btn").addEventListener("click", async () => {
+        const content = await sendMessage({type: "EXPORT_LOGS"});
+        if (content === null)
+            return showError(GENERAL_ERR_MSG);
+        const blob = new Blob([content], {level: "text/plain"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "usaco-together.log";
+        a.click();
+        URL.revokeObjectURL(url);
     });
 });

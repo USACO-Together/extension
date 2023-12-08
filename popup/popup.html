@@ -30,7 +30,12 @@ SOFTWARE.
     </head>
     <body>
         <div>
-            <h2 class="centered"><img src="../assets/icon.svg" class="icon">USACO Together</h2>
+            <div class="centered">
+                <h2><img src="../assets/icon.svg" class="icon">USACO Together</h2>
+                <button id="logs-btn" title="Download Logs">
+                    <img src="../assets/download-icon.svg">
+                </button>
+            </div>
             <hr>
         </div>
         <div id="error-container" class="none"></div>
@@ -41,15 +46,15 @@ SOFTWARE.
             <div id="login-form">
                 <div class="form-field">
                     <label for="username">Username: </label>
-                    <input id="username">
+                    <input id="username" title="Enter a username 2 to 32 characters long">
                 </div>
                 <div class="form-field">
                     <label for="password">Password: </label>
-                    <input id="password" type="password">
+                    <input id="password" type="password" title="Enter a password 8 to 64 characters long">
                 </div>
                 <div class="centered" id="submit-container">
-                    <button id="signup-btn" class="submit-btn">Sign Up</button>
-                    <button id="login-btn" class="submit-btn">Login</button>
+                    <button id="signup-btn" class="submit-btn" title="Sign Up">Sign Up</button>
+                    <button id="login-btn" class="submit-btn" title="Log In">Login</button>
                 </div>
             </div>
         </div>
@@ -58,20 +63,20 @@ SOFTWARE.
                 <div id="current-user-container">
                     Currently logged in as: <span id="current-user">Oviyan Gandhi</span>
                     <div id="button-container">
-                        <button id="settings-btn">
+                        <button id="settings-btn" title="Go to settings">
                             <img src="../assets/settings-icon.svg">
                         </button>
-                        <button id="logout-btn">
+                        <button id="logout-btn" title="Log Out">
                             <img src="../assets/logout-icon.svg">
                         </button>
                     </div>
                 </div>
                 <div>
                     <label for="req-name">Follow someone: </label>
-                    <input id="req-name">
+                    <input id="req-name" title="Enter the username of the user to follow">
                 </div>
                 <div class="centered">
-                    <button id="follow-btn">Follow</button>
+                    <button id="follow-btn" title="Follow">Follow</button>
                 </div>
             </div>
             <hr>
@@ -83,21 +88,21 @@ SOFTWARE.
         <div id="settings-page" class="fade hidden none">
             <div class="form-field">
                 <label for="new-username">New Username: </label>
-                <input id="new-username">
+                <input id="new-username" title="Enter new username">
             </div>
             <div class="form-field">
                 <label for="new-password">New Password: </label>
-                <input id="new-password" type="password">
+                <input id="new-password" type="password" title="Enter new password">
             </div>
             <div class="form-field">
                 <label for="new-password-confirm">Confirm New Password: </label>
-                <input id="new-password-confirm" type="password">
+                <input id="new-password-confirm" type="password" title="Re-enter your new password">
             </div>
             <div class="centered" id="submit-container">
-                <button id="save-btn" class="submit-btn">Save</button>
-                <button id="back-btn" class="submit-btn">Back</button>
+                <button id="save-btn" class="submit-btn" title="Save">Save</button>
+                <button id="back-btn" class="submit-btn" title="Back">Back</button>
                 <br>
-                <button id="delete-btn" class="submit-btn">Delete Account</button>
+                <button id="delete-btn" class="submit-btn" title="Delete Account">Delete Account</button>
                 <br>
             </div>
         </div>
