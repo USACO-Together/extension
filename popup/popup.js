@@ -352,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 token: result.token, body: {username: to_follow}
             });
             if (data !== null) {
-                addFollower(to_follow);
                 followInput.value = "";
                 followData.following.push(to_follow);
                 for (const problem in data.problems){
@@ -365,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         followData.modules[module] = {};
                     followData.modules[module][to_follow] = data.modules[module];
                 }
+                addFollower(to_follow);
             }
         }
     });
