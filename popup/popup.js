@@ -43,8 +43,9 @@ function url(path){
 }
 
 var loadingContainer;
-async function performRequest(method, path, data, suppressErrors){
-    loadingContainer.classList.remove("none");
+async function performRequest(method, path, data, suppressErrors, showLoading = true){
+    if (showLoading)
+        loadingContainer.classList.remove("none");
     const token = data.token;
     delete data.token;
     let log_msg = `${method} ${path}\nData: ${JSON.stringify(data)}`;
@@ -67,7 +68,6 @@ async function performRequest(method, path, data, suppressErrors){
     data = await response.json();
     let resp_str = "";
     for (const key in data){
-        console.log(key, typeof data[key]);
         resp_str += `${key}: ${(typeof data[key] !== "object") ? data[key] : "[object]"}, `;
     }
     log(`${log_msg}\nResponse: {${resp_str.slice(0, -2)}}`);
@@ -297,16 +297,25 @@ async function submitForm(path){
     }
 }
 
-var newUsername, newPassword, newPasswordConfirm;
-let deleteBtnClicked = false;
+var newUsername, newPassword, newPasswordConfirm, followInput, autocompleteList;
+let deleteBtnClicked = false, lastInput = Infinity, showAutocompleteList = false;
 
-document.addEventListener('DOMContentLoaded', () => {
+function setFollowInputValue(value = ""){
+    followInput.value = value;
+    showAutocompleteList = false;
+    autocompleteList.classList.add("none");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    // General
     const elements = [
         "follow-list", "error-container", "loading-container",
-        "new-username", "new-password", "new-password-confirm"
-    ]
+        "new-username", "new-password", "new-password-confirm",
+        "follow-input", "autocomplete-list"
+    ];
     for (const el of elements)
         window[el.replace(/-./g, x=>x[1].toUpperCase())] = $(el);
+
     chrome.storage.sync.get(["token"]).then(result => {
         if (typeof result.token === "string")
             mainPageSequence(result.token, () => switchSection("login-page"));
@@ -314,9 +323,25 @@ document.addEventListener('DOMContentLoaded', () => {
             switchSection("login-page");
     });
 
+    $("logs-btn").addEventListener("click", async () => {
+        const content = await sendMessage({type: "EXPORT_LOGS"});
+        if (content === null)
+            return showError(GENERAL_ERR_MSG);
+        const blob = new Blob([content], {level: "text/plain"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "usaco-together.log";
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // Login Page
     $("signup-btn").addEventListener("click", () => submitForm("/users"));
     $("login-btn").addEventListener("click", () => submitForm("/token"));
 
+
+    // Main Page
     $("logout-btn").addEventListener("click", () => {
         chrome.storage.sync.get(["token"]).then(result => {
             log("Logging out...");
@@ -331,12 +356,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     $("follow-btn").addEventListener("click", async () => {
         errorContainer.classList.add("none");
-        const followInput = $("req-name");
         const to_follow = followInput.value.trim();
         log(`Trying to follow ${to_follow}`);
         if (!to_follow) return;
         if (to_follow == $("current-user").textContent){
-            followInput = "";
+            setFollowInputValue();
             return showError("You may not follow yourself.");
         }
         const result = await chrome.storage.sync.get(["token"]);
@@ -344,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if ((await ensureDataExists(result.token)) === false)
                 return;
             if (followData.following.includes(to_follow)){
-                followInput = "";
+                setFollowInputValue();
                 log(`Already following ${to_follow}`);
                 return showError("You are already following this user.");
             }
@@ -352,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 token: result.token, body: {username: to_follow}
             });
             if (data !== null) {
-                followInput.value = "";
+                setFollowInputValue();
                 followData.following.push(to_follow);
                 for (const problem in data.problems){
                     if (!(problem in followData.problems))
@@ -369,8 +393,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    followInput.addEventListener("input", () => {
+        showAutocompleteList = false;
+        autocompleteList.classList.add("none");
+        if (!followInput.value.trim()){
+            lastInput = Infinity;
+            return;
+        }
+        lastInput = Date.now();
+        setTimeout(async () => {
+            if (Date.now() - lastInput >= 1000){
+                lastInput = Infinity;
+                showAutocompleteList = true;
+                const res = await chrome.storage.sync.get(["token"]);
+                const data = await performRequest(
+                    "GET", `/autocomplete?name=${followInput.value.trim()}`,
+                    {token: res.token}, false, false
+                );
+                autocompleteList.replaceChildren();
+                for (const user of data.users){
+                    const li = document.createElement("li");
+                    li.textContent = user;
+                    li.addEventListener("click", () => setFollowInputValue(user));
+                    autocompleteList.appendChild(li);
+                }
+                autocompleteList.classList.remove("none");
+            }
+        }, 1000);
+    });
+    $("follow-container").addEventListener("mouseenter", () => {
+        if (showAutocompleteList)
+            autocompleteList.classList.remove("none");
+    });
+    $("follow-container").addEventListener("mouseleave", () => {
+        autocompleteList.classList.add("none");
+    });
+
+
+    // Settings Page
     $("settings-btn").addEventListener("click", () => switchSection("settings-page"));
     $("back-btn").addEventListener("click", () => switchSection("main-page"));
+
     const deleteBtn = $("delete-btn");
     deleteBtn.addEventListener("click", () => {
         if (deleteBtnClicked){
@@ -395,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 5000);
         }
     });
+
     $("save-btn").addEventListener("click", async () => {
         const body = {};
         const newName = newUsername.value.trim();
@@ -438,17 +502,5 @@ document.addEventListener('DOMContentLoaded', () => {
             newPasswordConfirm.value = "";
             log("Successfully saved settings");
         }
-    });
-    $("logs-btn").addEventListener("click", async () => {
-        const content = await sendMessage({type: "EXPORT_LOGS"});
-        if (content === null)
-            return showError(GENERAL_ERR_MSG);
-        const blob = new Blob([content], {level: "text/plain"});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "usaco-together.log";
-        a.click();
-        URL.revokeObjectURL(url);
     });
 });

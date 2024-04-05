@@ -44,6 +44,21 @@ hr {
     margin-bottom: 20px;
 }
 
+/* Scrollbar */
+::-webkit-scrollbar {
+    background-color: transparent;
+    width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
 /* Heading Icon */
 
 .icon {
@@ -181,16 +196,42 @@ h2 {
     font-weight: bold;
 }
 
+/* Autocomplete List */
+
+#autocomplete-list {
+    margin-top: 0px;
+    position: absolute;
+    width: 90%;
+    z-index: 11;
+    max-height: 200px;
+    overflow-y: auto;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    background-color: rgb(35, 35, 35);
+}
+
+#autocomplete-list li {
+    transition: background-color 0.2s ease-in-out;
+    padding: 10px;
+    background-color: rgb(35, 35, 35);
+    border-bottom-color: rgb(45, 45, 45);
+}
+
+#autocomplete-list li:hover {
+    transition: background-color 0.2s ease-in-out;
+    background-color: rgb(45, 45, 45);
+}
+
 /* Follow List */
 
-#follow-list {
+#follow-list, #autocomplete-list {
     padding-left: 0px;
     margin-bottom: 0px;
     font-size: 18px;
     list-style: none;
 }
 
-li {
+#follow-list li {
     position: relative;
     transition: opacity 0.5s ease-in-out, top 0.5s ease-in-out;
     top: -50px;
@@ -201,6 +242,12 @@ li {
     font-size: 20px;
     user-select: text;
 }
+
+.name {
+    margin-left: 10px;
+}
+
+/* Solve Count */
 
 .chevron-container {
     display: inline-block;
@@ -214,16 +261,12 @@ li {
     transition: transform 0.3s;
 }
 
-.middle-chevron:hover {
+.chevron-container:hover .middle-chevron {
     transform: rotate(90deg);
 }
 
-.last-chevron:hover {
+.chevron-container:hover .last-chevron {
     transform: rotate(-90deg);
-}
-
-.name {
-    margin-left: 10px;
 }
 
 .solve-count {
@@ -255,7 +298,8 @@ li {
     background-color: rgba(255, 0, 0, 0.2);
 }
 
-/* Loading Ellipsis (token from loading.io) */
+/* Loading Ellipsis (taken from loading.io) */
+
 .lds-ellipsis {
     display: inline-block;
     position: relative;

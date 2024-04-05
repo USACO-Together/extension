@@ -61,7 +61,7 @@ SOFTWARE.
         <div id="main-page" class="fade hidden none">
             <div>
                 <div id="current-user-container">
-                    Currently logged in as: <span id="current-user">Oviyan Gandhi</span>
+                    Currently logged in as: <span id="current-user"></span>
                     <div id="button-container">
                         <button id="settings-btn" title="Go to settings">
                             <img src="../assets/settings-icon.svg">
@@ -72,8 +72,11 @@ SOFTWARE.
                     </div>
                 </div>
                 <div>
-                    <label for="req-name">Follow someone: </label>
-                    <input id="req-name" title="Enter the username of the user to follow">
+                    <label for="follow-input">Follow someone: </label>
+                    <div id="follow-container">
+                        <input id="follow-input" title="Enter the username of the user to follow">
+                        <ul id="autocomplete-list" class="none"></ul>
+                    </div>
                 </div>
                 <div class="centered">
                     <button id="follow-btn" title="Follow">Follow</button>
