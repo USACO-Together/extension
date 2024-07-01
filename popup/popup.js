@@ -24,7 +24,7 @@ SOFTWARE.
 
 // Logging
 async function sendMessage(data){
-    const [tab] = await chrome.tabs.query({url: "https://usaco.guide/*"});
+    const [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
     if (!tab) return null;
     try {
         return await chrome.tabs.sendMessage(tab.id, data);
@@ -326,7 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("logs-btn").addEventListener("click", async () => {
         const content = await sendMessage({type: "EXPORT_LOGS"});
         if (content === null)
-            return showError(GENERAL_ERR_MSG);
+            return showError("Please open a usaco.guide tab before exporting logs.");
         const blob = new Blob([content], {level: "text/plain"});
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
