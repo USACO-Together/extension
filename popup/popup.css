@@ -33,6 +33,7 @@ body {
     background-color: rgb(26, 26, 26);
     color: white;
     user-select: none;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .centered {
